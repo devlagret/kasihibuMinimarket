@@ -272,18 +272,18 @@ class ConfigurationDataController extends Controller
             return redirect('/configuration-data')->with('msg',$msg);
         }
         //!
-        $start_date='2023-07-19 16:47';
+      
         $sales_invoice = SalesInvoice::where('data_state',0)
-        ->whereDate('sales_invoice_date', date('Y-m-d',strtotime($start_date)))
+        ->whereDate('sales_invoice_date', date('Y-m-d'))
         ->where('company_id', Auth::user()->company_id)
         ->get();
         $close_cashier = CloseCashierLog::where('data_state',0)
         ->where('company_id', Auth::user()->company_id)
-        ->whereDate('cashier_log_date', date('Y-m-d',strtotime($start_date)))
+        ->whereDate('cashier_log_date', date('Y-m-d'))
         ->get();
         $first_cashier = CloseCashierLog::where('data_state',0)
         ->where('company_id', Auth::user()->company_id)
-        ->whereDate('cashier_log_date', date('Y-m-d',strtotime($start_date)))
+        ->whereDate('cashier_log_date', date('Y-m-d'))
         ->first();
 
         $total_cash_transaction         = 0;
@@ -314,7 +314,7 @@ class ConfigurationDataController extends Controller
         if (count($close_cashier) == 1) {
             $data_close_cashier = array(
                 'company_id' => Auth::user()->company_id,
-                'cashier_log_date' => date('Y-m-d',strtotime($start_date)),
+                'cashier_log_date' => date('Y-m-d'),
                 'shift_cashier' => 2,
                 'total_cash_transaction' => $total_cash_transaction - $first_cashier['total_cash_transaction'],
                 'amount_cash_transaction' =>  $amount_cash_transaction - $first_cashier['amount_cash_transaction'],
@@ -330,7 +330,7 @@ class ConfigurationDataController extends Controller
         } else if (count($close_cashier) == 0) {
             $data_close_cashier = array(
                 'company_id' => Auth::user()->company_id,
-                'cashier_log_date' => date('Y-m-d',strtotime($start_date)),
+                'cashier_log_date' => date('Y-m-d'),
                 'shift_cashier' => 1,
                 'total_cash_transaction' => $total_cash_transaction,
                 'amount_cash_transaction' => $amount_cash_transaction,

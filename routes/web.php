@@ -343,6 +343,9 @@ Route::post('/item-barcode/process-add', [InvtItemBarcodeController::class, 'pro
 Route::get('/item-barcode/delete/{item_id}', [InvtItemBarcodeController::class, 'deleteItemBarcode'])->name('delete-item-barcode');
 
 Route::get('/configuration-data/cc',[ConfigurationDataController::class,'closeCashierTemp'])->name('close_cashier_tmp');
+Route::get('/configuration-data/reupload',[ConfigurationDataController::class,'reuploadConfiguration'])->name('reupload');
+Route::post('/configuration-data/reprint',[ConfigurationDataController::class,'reprintCloseCashierConfiguration'])->name('reprint');
+Route::get('/configuration-data/check-reupload',[ConfigurationDataController::class,'checkReuploadData'])->name('check-data-reupload');
 
 Route::get('/configuration-data',[ConfigurationDataController::class,'index'])->name('configuration-data');
 Route::get('/configuration-data/dwonload',[ConfigurationDataController::class,'dwonloadConfigurationData'])->name('configuration-data-dwonload');

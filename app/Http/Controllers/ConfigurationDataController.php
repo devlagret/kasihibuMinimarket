@@ -26,6 +26,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Session;
+use Prophecy\Doubler\Generator\Node\ReturnTypeNode;
 
 class ConfigurationDataController extends Controller
 {
@@ -41,7 +43,22 @@ class ConfigurationDataController extends Controller
     //     $data = 0;
     //    }
     //     session()->flash('data', $data);
-        return view('content.ConfigurationData.ConfigurationData');
+    if (!Session::get('start_date')) {
+        $start_date = date('Y-m-d');
+    } else {
+        $start_date = Session::get('start_date');
+    }
+    if (!Session::get('end_date')) {
+        $end_date = date('Y-m-d');
+    } else {
+        $end_date = Session::get('end_date');
+    }
+    if (!Session::get('date')) {
+        $date = Carbon::now()->subday()->format('Y-m-d');
+    } else {
+        $date = Session::get('date');
+    }
+        return view('content.ConfigurationData.ConfigurationData',compact('start_date', 'end_date', 'date'));
     }
     
 
@@ -74,7 +91,6 @@ class ConfigurationDataController extends Controller
             CoreMember::select(DB::statement('SET FOREIGN_KEY_CHECKS = 0'))->truncate();
             foreach ($response['member'] as $key => $val) {
                 if ($val['company_id'] == Auth::user()->company_id) {
-                    // dd($val);
                     CoreMember::create($val);
                 }
             }
@@ -236,7 +252,6 @@ class ConfigurationDataController extends Controller
             } catch (\Throwable $th) {
                
                 DB::rollback();
-                dd($th);
                 $msg = "Data Gagal diupload";
                 return redirect('configuration-data')->with('msg', $msg);
 
@@ -249,18 +264,19 @@ class ConfigurationDataController extends Controller
 
     public function checkCloseCashierConfiguration()
     {
-        $time= CloseCashierLog::where('created_at','>',Carbon::now()->subHours())->where('cashier_log_date','=',Carbon::now()->format('Y-m-d'))->get('created_at');
+        $time= CloseCashierLog::where('created_at','>',Carbon::now()->subHours())->where('cashier_log_date','=',Carbon::now()->format('Y-m-d'))->get();
         $data = CloseCashierLog::where('data_state',0)
         ->where('company_id', Auth::user()->company_id)
         ->whereDate('cashier_log_date', date('Y-m-d'))
         ->get();
 
         if(count($data)==0){
-            return count($data);
+            return ["status"=>0,"msg"=>"manual output"];
         }elseif(count($time)==1&&count($data)==1){
-            return 2;
-        }   
-        return count($data);
+            return ["status"=>3,"time"=>[Carbon::now()->subHours(),$time],"count"=>count($time),"msg"=>"output from level 2"];
+        } 
+        return ["status"=>count($data), "msg"=>"output from count"];
+    
     }
 
     public function closeCashierConfiguration()
@@ -504,23 +520,25 @@ class ConfigurationDataController extends Controller
     }
     //!
     
-    public function printCloseCashierConfiguration1()
+    public function reprintCloseCashierConfiguration(Request $request)
     {
+        Session::put('start_date', $request->date);
         $data = CloseCashierLog::where('data_state',0)
         ->where('company_id', Auth::user()->company_id)
-        ->orderBy('cashier_log_id', 'DESC')
+        ->where('cashier_log_date','=',date('Y-m-d', strtotime($request->date)))
+        ->where('shift_cashier','=',$request->shift)
         ->first();
 
         $data_company = PreferenceCompany::where('data_state',0)
         ->where('company_id', Auth::user()->company_id)
         ->first();
-
+        
         $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
         $pdf::SetPrintHeader(false);
         $pdf::SetPrintFooter(false);
 
-        $pdf::SetMargins(1, 1, 1, 1); // put space of 10 on top
+        $pdf::SetMargins(6, 1, 5, 1); // put space of 10 on top
 
         $pdf::setImageScale(PDF_IMAGE_SCALE_RATIO);
 
@@ -529,9 +547,9 @@ class ConfigurationDataController extends Controller
             $pdf::setLanguageArray($l);
         }
 
-        $pdf::AddPage('P', array(48, 3276));
+        $pdf::AddPage('P', array(76, 3276));
 
-        $pdf::SetFont('helvetica', '', 10);
+        $pdf::SetFont('dejavusans', '', 10);
 
         $tbl = " 
         <table style=\" font-size:9px; \" >
@@ -561,7 +579,7 @@ class ConfigurationDataController extends Controller
             <tr>
                 <td width=\"25%\">KASIR</td>
                 <td width=\"10%\" style=\"text-align: center;\">:</td>
-                <td width=\"60%\">".Auth::user()->name."</td>
+                <td width=\"60%\">".ucfirst(Auth::user()->name)."</td>
             </tr>
         </table>
         <div>---------------------------------------------------</div>
@@ -748,5 +766,62 @@ class ConfigurationDataController extends Controller
 
         $msg = "Data Berhasil dicadangkan";
         return redirect('/configuration-data')->with('msg', $msg);
+    }
+    public function checkReuploadData(Request $request) {
+        $sales = SalesInvoice::
+        where('company_id', Auth::user()->company_id)
+        ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->header('start_date'))))
+        ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($request->header('end_date'))))
+        ->get();
+        $salesItem = SalesInvoiceItem::
+        where('company_id', Auth::user()->company_id)
+        ->where('created_at','>=',date('Y-m-d H:i', strtotime($request->header('start_date')." 00:00")))
+        ->where('created_at','<=',date('Y-m-d H:i', strtotime($request->header('end_date')." 23:59")))
+        ->get();
+        $response = Http::post('http://127.0.0.1:8000/api/check-uploaded', [
+            'start_date' => $request->header('start_date')." 00:00",
+            'end_date'  => $request->header('end_date')." 23:59",
+            'count_sales' => count($sales),
+            "sales_item"=>count($salesItem)
+        ]);
+        if($response->object()->result){
+            return 1;
+        }
+        return [$response->body(),$response->object()->result,$request->header('start_date'),$request->header('end_date'),date('Y-m-d H:i', strtotime($request->header('end_date')." 00:00")),count($sales),count($salesItem),$sales,$salesItem];
+    }
+    public function reuploadConfiguration(Request $request){
+        if(Auth::user()->name != 'administrator'){
+            $msg = "Data Gagal diupload";
+            return redirect('configuration-data')->with('msg', $msg);
+        }
+        Session::put('start_date', $request->start_date);
+        Session::put('end_date', $request->end_date);
+       
+        $sales = SalesInvoice::where('status_upload',0)
+        ->where('company_id', Auth::user()->company_id)
+        ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->start_date)))
+        ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($request->end_date)))
+        ->get();
+        $salesItem = SalesInvoiceItem::where('status_upload',0)
+        ->where('company_id', Auth::user()->company_id)
+        ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->start_date)))
+        ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($request->end_date)))
+        ->get();
+        // $response = Http::post('http://127.0.0.1:8000/api/reupload-data', [
+        //     'start_date' => $request->start_date,
+        //     'end_date'  => $request->end_date,
+        //     'sales'         => json_decode($sales, true),
+        //     'salesItem'     => json_decode($salesItem, true),
+        // ]);
+            // return [$sales,$salesItem];
+            
+            // response->body() ==
+        if (0) {      
+                $msg = "Data Berhasil diupload";
+                return redirect('configuration-data')->with('msg', $msg);           
+        } else {
+            $msg = "Data Gagal diupload";
+            return redirect('configuration-data')->with('msg', $msg);
+        }
     }
 }

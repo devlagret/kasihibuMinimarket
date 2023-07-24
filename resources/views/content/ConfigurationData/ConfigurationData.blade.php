@@ -21,6 +21,7 @@
             $('#reupload').addClass('disabled');
             $('#reprint').addClass('disabled');
             hideInput();
+            console.log('disabled');
         }
 
         function showButton() {
@@ -32,6 +33,7 @@
             $('#reupload').removeClass('disabled');
             $('#reprint').removeClass('disabled');
             showInput();
+            console.log('enable');
         }
 
         function hideInput() {
@@ -162,13 +164,13 @@
                     },
                     success: function(data) {
                         console.log(data);
-                        if (data == 0) {
+                        if (data.status == 0) {
                             $('#modalCloseCashier1').modal('show');
                             $('#modalCloseCashierLabel1').text('Upload Ulang');
                             $('#modal-body-single').text('Upload Ulang Gagal');
                             $('#reupload').html('Upload');
                             showButton();
-                        } else  if (data == 1) {
+                        } else  if (data.status == 1) {
                             $('#modalReupload').modal('show');
                             $('#reupload').html('Upload');
                             showButton();
@@ -177,6 +179,7 @@
                             $('#reupload').html('<span class=\'spinner-grow spinner-grow-sm mb-1\' role=\'status\' aria-hidden=\'true\'></span> Proses ...');
                             hideButton();
                             // window.location.replace("{{ route('configuration-data-dwonload') }}");
+                            showButton();
                         }
                     }
                 }).fail(function(jqXHR, textStatus, errorThrown) {
@@ -226,8 +229,8 @@
                     Apakah anda ingin mengganti data yang sudah ada?
                 </div>
                 <div class="modal-footer">
-                    <button onclick="buttonClick('isTrueDownload')" class="btn btn-success">Iya</button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Tidak</button>
+                    <button onclick="hideButton();buttonClick('isTrueDownload')" class="btn btn-success">Iya</button>
+                    <button onclick="showButton();" type="button" class="btn btn-danger" data-bs-dismiss="modal">Tidak</button>
                 </div>
             </div>
         </div>
@@ -244,8 +247,8 @@
                     Apakah anda yakin ingin menutup kasir?
                 </div>
                 <div class="modal-footer">
-                    <button onclick="buttonClick('isTrueCloseCashier')" class="btn btn-success">Iya</button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Tidak</button>
+                    <button onclick="this.disabled=true;hideButton();buttonClick('isTrueCloseCashier')" class="btn btn-success">Iya</button>
+                    <button onclick="showButton();" type="button" class="btn btn-danger" data-bs-dismiss="modal">Tidak</button>
                 </div>
             </div>
         </div>
@@ -262,7 +265,7 @@
                     Anda sudah Tutup Kasir 2 kali !
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Keluar</button>
+                    <button type="button" onclick="showButton();" class="btn btn-danger" data-bs-dismiss="modal">Keluar</button>
                 </div>
             </div>
         </div>
@@ -279,22 +282,22 @@
                     Data sudah diupload ke server
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Ok</button>
+                    <button type="button" class="btn btn-success" onclick="showButton();" data-bs-dismiss="modal">Ok</button>
                 </div>
             </div>
         </div>
     </div>
     <div style="display: flex; justify-content: center; align-items: center; height: 150px; ">
 
-        <button onclick="buttonClick('close_cashier_temp');" id="close_cashier_temp" class="btn btn-success btn-lg mx-2">
+        <button onclick="hideButton();buttonClick('close_cashier_temp');" id="close_cashier_temp" class="btn btn-success btn-lg mx-2">
             <i class="fa fa-archive"></i> Tutup kasir 03-07-2023 shift 2</button>
-        <button onclick="buttonClick('download_data');" id="download_data" class="btn btn-success btn-lg mx-2">
+        <button onclick="hideButton();buttonClick('download_data');" id="download_data" class="btn btn-success btn-lg mx-2">
             <i class="fa fa-download"></i> Download Data</button>
-        <button onclick="buttonClick('upload_data');" id="upload_data" class="btn btn-success btn-lg mx-2">
+        <button onclick="hideButton();buttonClick('upload_data');" id="upload_data" class="btn btn-success btn-lg mx-2">
             <i class="fa fa-upload"></i> Upload Data</button>
-        <button onclick="buttonClick('close_cashier');" id="close_cashier" class="btn btn-success btn-lg mx-2">
+        <button onclick="hideButton();buttonClick('close_cashier');" id="close_cashier" class="btn btn-success btn-lg mx-2">
             <i class="fa fa-archive"></i> Tutup Kasir</button>
-        <button onclick="buttonClick('backup_data');" id="backup_data" class="btn btn-success btn-lg mx-2">
+        <button onclick="hideButton();buttonClick('backup_data');" id="backup_data" class="btn btn-success btn-lg mx-2">
             <i class="fa fa-cloud"></i> Candangkan Data</button>
     </div>
     @if (Auth::user()->name == 'administrator')
@@ -333,7 +336,7 @@
                             <div class="card-footer text-muted">
                                 <div class="form-actions float-right">
                                     <button type="button" id="reupload" name="Save"
-                                        onclick="buttonClick('reupload');" class="btn btn-success"
+                                        onclick="hideButton();buttonClick('reupload');" class="btn btn-success"
                                         title="Save">Upload</button>
                                 </div>
                             </div>

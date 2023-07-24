@@ -64,7 +64,7 @@ class ConfigurationDataController extends Controller
 
     public function checkDataConfiguration()
     {
-        $response = Http::get('http://127.0.0.1:8000/api/get-data-item-stock');
+        $response = Http::get(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/get-data-item-stock');
         $result_item_stock = json_decode($response,TRUE);
         
         foreach ($result_item_stock as $key => $val) {
@@ -83,11 +83,9 @@ class ConfigurationDataController extends Controller
 
     public function dwonloadConfigurationData()
     {
-        $response = Http::get('http://127.0.0.1:8000/api/get-data');
-
+        $response = Http::get(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/get-data');
         DB::beginTransaction();
         try {
-     
             CoreMember::select(DB::statement('SET FOREIGN_KEY_CHECKS = 0'))->truncate();
             foreach ($response['member'] as $key => $val) {
                 if ($val['company_id'] == Auth::user()->company_id) {
@@ -161,9 +159,7 @@ class ConfigurationDataController extends Controller
             DB::commit();
             session()->flash('msg', "Data berhasil didownload");
             return redirect('configuration-data');
-
         } catch (\Throwable $th) {
-
             DB::rollback();
             session()->flash('msg', "Data gagal didownload (".$th.")");
             return redirect('configuration-data');
@@ -173,26 +169,34 @@ class ConfigurationDataController extends Controller
 
     public function uploadConfigurationData()
     {
-        $sales = SalesInvoice::where('status_upload',0)
+        //use Database: Query Builder (DB) not laravel eqloquent or date will be error on server side (not same)
+        $sales = DB::table('sales_invoice')
+        ->where('status_upload',0)
         ->where('company_id', Auth::user()->company_id)
         ->get();
-        $salesItem = SalesInvoiceItem::where('status_upload',0)
+        $salesItem = DB::table('sales_invoice_item')
+        ->where('status_upload',0)
         ->where('company_id', Auth::user()->company_id)
         ->get();
-        $member = CoreMember::where('member_account_receivable_amount_temp', '!=', 0)
+        $member = DB::table('core_member')
+        ->where('member_account_receivable_amount_temp', '!=', 0)
         ->where('company_id', Auth::user()->company_id)
         ->get();
-        $closeCashier = CloseCashierLog::where('status_upload', 0)
+        $closeCashier = DB::table('close_cashier_log')
+        ->where('status_upload', 0)
         ->where('company_id', Auth::user()->company_id)
         ->get();
-        $loginLog = SystemLoginLog::where('status_upload', 0)
+        //use DB if needed
+        $loginLog = SystemLoginLog::
+        where('status_upload', 0)
         ->where('company_id', Auth::user()->company_id)
         ->get();
-        $salesRemove = SIIRemoveLog::where('status_upload', 0)
+        $salesRemove = SIIRemoveLog::
+        where('status_upload', 0)
         ->where('company_id', Auth::user()->company_id)
         ->get();
-
-        $response = Http::post('http://127.0.0.1:8000/api/post-data', [
+        // dd($closeCashier);
+        $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/post-data', [
             'sales'         => json_decode($sales, true),
             'salesItem'     => json_decode($salesItem, true),
             'member'        => json_decode($member, true),
@@ -264,18 +268,34 @@ class ConfigurationDataController extends Controller
 
     public function checkCloseCashierConfiguration()
     {
-        $time= CloseCashierLog::where('created_at','>',Carbon::now()->subHours())->where('cashier_log_date','=',Carbon::now()->format('Y-m-d'))->get();
+        $time= CloseCashierLog::where('data_state',0)
+        ->where('created_at','>',Carbon::now()->subHours())->where('cashier_log_date','=',Carbon::now()->format('Y-m-d'))->get();
         $data = CloseCashierLog::where('data_state',0)
         ->where('company_id', Auth::user()->company_id)
         ->whereDate('cashier_log_date', date('Y-m-d'))
+        ->orderByDesc('created_at')
         ->get();
-
+    
         if(count($data)==0){
-            return ["status"=>0,"msg"=>"manual output"];
-        }elseif(count($time)==1&&count($data)==1){
-            return ["status"=>3,"time"=>[Carbon::now()->subHours(),$time],"count"=>count($time),"msg"=>"output from level 2"];
-        } 
-        return ["status"=>count($data), "msg"=>"output from count"];
+            return ["status"=>0,"msg"=>"Tutup shift 1"];
+        }elseif(count($time)>=1&&count($data)>=1){
+            if($data[0]->created_at!=$data[1]->created_at){
+                return ["status"=>count($data), "msg"=>"the last one"];
+            }
+            return ["status"=>3,"time"=>Carbon::now()->subHours(),"count"=>[count($time),count($data)],"msg"=>"Shift 1 sudah ditutup, shift 2 masih panjang ("
+            .Carbon::parse($time[0]->created_at)->addHour()->diff(Carbon::now())->format('%H:%I:%S').")"];
+        }else if(count($data)>=1&&count($time)==0){
+           if($data[0]->created_at==$data[1]->created_at){
+            $data = CloseCashierLog::where('data_state',0)
+            ->where('company_id', Auth::user()->company_id)
+            ->where('shift_cashier',2)
+            ->orderBy('cashier_log_id', 'DESC')
+            ->first();
+            $data->data_state = '1';
+            return ["status"=>1,$data->save()];
+           }
+        }
+        return ["status"=>count($data), "msg"=>"the last one"];
     
     }
 
@@ -369,7 +389,7 @@ class ConfigurationDataController extends Controller
             return redirect('/configuration-data')->with('msg',$msg);
         }
     }
-// ! change
+
     public function closeCashierTemp(){
         $start_date='2023-07-03 13:00';
         $end_date='2023-07-03 22:00';
@@ -518,7 +538,7 @@ class ConfigurationDataController extends Controller
         $filename = 'Tutup_Kasir_'.date('d-m-Y',strtotime($start_date)).'_sd_'.date('d-m-Y',strtotime($end_date)).'.pdf';
         $pdf::Output($filename, 'I');
     }
-    //!
+
     
     public function reprintCloseCashierConfiguration(Request $request)
     {
@@ -778,14 +798,14 @@ class ConfigurationDataController extends Controller
         ->where('created_at','>=',date('Y-m-d H:i', strtotime($request->header('start_date')." 00:00")))
         ->where('created_at','<=',date('Y-m-d H:i', strtotime($request->header('end_date')." 23:59")))
         ->get();
-        $response = Http::post('http://127.0.0.1:8000/api/check-uploaded', [
+        $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/check-uploaded', [
             'start_date' => $request->header('start_date')." 00:00",
             'end_date'  => $request->header('end_date')." 23:59",
             'count_sales' => count($sales),
             "sales_item"=>count($salesItem)
         ]);
         if($response->object()->result){
-            return 1;
+            return ['status'=>1,'data' => $response->object()];
         }
         return [$response->body(),$response->object()->result,$request->header('start_date'),$request->header('end_date'),date('Y-m-d H:i', strtotime($request->header('end_date')." 00:00")),count($sales),count($salesItem),$sales,$salesItem];
     }
@@ -797,17 +817,17 @@ class ConfigurationDataController extends Controller
         Session::put('start_date', $request->start_date);
         Session::put('end_date', $request->end_date);
        
-        $sales = SalesInvoice::where('status_upload',0)
-        ->where('company_id', Auth::user()->company_id)
+        $sales = SalesInvoice::
+        where('company_id', Auth::user()->company_id)
         ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->start_date)))
         ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($request->end_date)))
         ->get();
-        $salesItem = SalesInvoiceItem::where('status_upload',0)
-        ->where('company_id', Auth::user()->company_id)
+        $salesItem = SalesInvoiceItem::
+        where('company_id', Auth::user()->company_id)
         ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->start_date)))
         ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($request->end_date)))
         ->get();
-        // $response = Http::post('http://127.0.0.1:8000/api/reupload-data', [
+        // $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/reupload-data', [
         //     'start_date' => $request->start_date,
         //     'end_date'  => $request->end_date,
         //     'sales'         => json_decode($sales, true),

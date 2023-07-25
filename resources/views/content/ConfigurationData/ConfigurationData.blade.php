@@ -4,7 +4,9 @@
 @section('js')
     <script>
         var data = {!! json_encode(session('msg')) !!}
-
+        @if (session('error')) 
+        alert(session('error'));
+        @endif
         if (data == 'Tutup Kasir Berhasil') {
             var mywindow = window.open('{{ route('print-close-cashier-configuration') }}', '_blank');
             mywindow.print();
@@ -170,7 +172,7 @@
                             $('#modal-body-single').text('Upload Ulang Gagal');
                             $('#reupload').html('Upload');
                             showButton();
-                        } else  if (data.status == 1) {
+                        } else  if (data.status == 1 ) {
                             $('#modalReupload').modal('show');
                             $('#reupload').html('Upload');
                             showButton();
@@ -178,7 +180,7 @@
                         else {
                             $('#reupload').html('<span class=\'spinner-grow spinner-grow-sm mb-1\' role=\'status\' aria-hidden=\'true\'></span> Proses ...');
                             hideButton();
-                            // window.location.replace("{{ route('configuration-data-dwonload') }}");
+                            $('#form-reupload').submit();
                             showButton();
                         }
                     }
@@ -310,8 +312,8 @@
                         </h5>
                     </div>
                     <div class="mx-3">
-                        <form method="post" class="reupload" id="form-prevent"
-                            action="{{ route('close_cashier_tmp') }}" enctype="multipart/form-data">
+                        <form method="post" class="reupload" id="form-reupload"
+                            action="{{ route('reupload') }}" enctype="multipart/form-data">
                             @csrf
                             <div class="card-body">
                                 <div class="row form-group">
@@ -338,6 +340,9 @@
                                     <button type="button" id="reupload" name="Save"
                                         onclick="hideButton();buttonClick('reupload');" class="btn btn-success"
                                         title="Save">Upload</button>
+                                        <button type="submit" id="reupload" name="Save"
+                                     class="btn btn-success"
+                                        title="Save">submit</button>
                                 </div>
                             </div>
                         </form>

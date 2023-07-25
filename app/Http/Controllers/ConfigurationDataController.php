@@ -206,6 +206,8 @@ class ConfigurationDataController extends Controller
         ]);
 
         if ($response->body() == 'true') {
+            $data=$response->object();
+            session()->flash('error', $data);
             DB::beginTransaction();
             try {
 
@@ -254,13 +256,17 @@ class ConfigurationDataController extends Controller
                 return redirect('configuration-data')->with('msg', $msg);
 
             } catch (\Throwable $th) {
-               
+                $data=$response->object();
+                session()->flash('error', [$th,$data]);
                 DB::rollback();
                 $msg = "Data Gagal diupload";
                 return redirect('configuration-data')->with('msg', $msg);
 
             }
         } else {
+
+            $data=$response->object();
+            session()->flash('error', $data);
             $msg = "Data Gagal diupload";
             return redirect('configuration-data')->with('msg', $msg);
         }
@@ -268,6 +274,7 @@ class ConfigurationDataController extends Controller
 
     public function checkCloseCashierConfiguration()
     {
+            //js loging avaible at blade
         $time= CloseCashierLog::where('data_state',0)
         ->where('created_at','>',Carbon::now()->subHours())->where('cashier_log_date','=',Carbon::now()->format('Y-m-d'))->get();
         $data = CloseCashierLog::where('data_state',0)
@@ -284,7 +291,8 @@ class ConfigurationDataController extends Controller
             }
             return ["status"=>3,"time"=>Carbon::now()->subHours(),"count"=>[count($time),count($data)],"msg"=>"Shift 1 sudah ditutup, shift 2 masih panjang ("
             .Carbon::parse($time[0]->created_at)->addHour()->diff(Carbon::now())->format('%H:%I:%S').")"];
-        }else if(count($data)>=1&&count($time)==0){
+        }else if(count($data)>1&&count($time)==0){
+              //js loging avaible at blade
            if($data[0]->created_at==$data[1]->created_at){
             $data = CloseCashierLog::where('data_state',0)
             ->where('company_id', Auth::user()->company_id)
@@ -792,22 +800,40 @@ class ConfigurationDataController extends Controller
         where('company_id', Auth::user()->company_id)
         ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->header('start_date'))))
         ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($request->header('end_date'))))
-        ->get();
+        ;
         $salesItem = SalesInvoiceItem::
         where('company_id', Auth::user()->company_id)
         ->where('created_at','>=',date('Y-m-d H:i', strtotime($request->header('start_date')." 00:00")))
         ->where('created_at','<=',date('Y-m-d H:i', strtotime($request->header('end_date')." 23:59")))
-        ->get();
+        ;
         $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/check-uploaded', [
             'start_date' => $request->header('start_date')." 00:00",
             'end_date'  => $request->header('end_date')." 23:59",
-            'count_sales' => count($sales),
-            "sales_item"=>count($salesItem)
+            'count_sales' => count($sales->get()),
+            "sales_item"=>count($salesItem->get())
         ]);
         if($response->object()->result){
+            DB::beginTransaction();
+            try {
+            $salesItem->where()->where('status_upload', 0)
+            ->update([
+                'status_upload' => 1,
+                'updated_id' => Auth::id()
+            ]);
+            $sales->where()->where('status_upload', 0)
+            ->update([
+                'status_upload' => 1,
+                'updated_id' => Auth::id()
+            ]);
+            DB::commit();
             return ['status'=>1,'data' => $response->object()];
+        } catch (\Throwable $th) {
+            DB::rollback();
+            return ['status'=>0,$th];
         }
-        return [$response->body(),$response->object()->result,$request->header('start_date'),$request->header('end_date'),date('Y-m-d H:i', strtotime($request->header('end_date')." 00:00")),count($sales),count($salesItem),$sales,$salesItem];
+           
+        }
+        return ['status'=>0,$response->body(),$response->object()->result,$request->header('start_date'),$request->header('end_date'),date('Y-m-d H:i', strtotime($request->header('end_date')." 00:00")),count($sales->get()),count($salesItem->get())];
     }
     public function reuploadConfiguration(Request $request){
         if(Auth::user()->name != 'administrator'){
@@ -824,18 +850,19 @@ class ConfigurationDataController extends Controller
         ->get();
         $salesItem = SalesInvoiceItem::
         where('company_id', Auth::user()->company_id)
-        ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->start_date)))
-        ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($request->end_date)))
+        ->where('created_at','>=',date('Y-m-d', strtotime($request->start_date)))
+        ->where('created_at','<=',date('Y-m-d', strtotime($request->end_date)))
         ->get();
-        // $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/reupload-data', [
-        //     'start_date' => $request->start_date,
-        //     'end_date'  => $request->end_date,
-        //     'sales'         => json_decode($sales, true),
-        //     'salesItem'     => json_decode($salesItem, true),
-        // ]);
-            // return [$sales,$salesItem];
-            
-            // response->body() ==
+        // dd([$sales,$salesItem]);            
+        $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/reupload-data', [
+            'start_date' => $request->start_date,
+            'end_date'  => $request->end_date,
+            'sales'         => json_decode($sales, true),
+            'salesItem'     => json_decode($salesItem, true),
+        ]);
+        return $response;
+        return $response->object();
+        return [$sales,$salesItem];            
         if (0) {      
                 $msg = "Data Berhasil diupload";
                 return redirect('configuration-data')->with('msg', $msg);           

@@ -174,14 +174,38 @@
                             showButton();
                         } else  if (data.status == 1 ) {
                             $('#modalReupload').modal('show');
+                            $('#reupload-modal-body').text('Tidak Ada Data Untuk Diupload')
+                            $('#modalReuploadTitle').text('Upload Ulang')
+                            $('#reupload').html('Upload');
+                            showButton();
+                        } else  if (data.status == 2 ) {
+                            $('#modalReupload').modal('show');
+                            $('#reupload-modal-body').text('Data sudah diupload ke server')
+                            $('#modalReuploadTitle').text('Data Sudah Diupload')
                             $('#reupload').html('Upload');
                             showButton();
                         } 
                         else {
                             $('#reupload').html('<span class=\'spinner-grow spinner-grow-sm mb-1\' role=\'status\' aria-hidden=\'true\'></span> Proses ...');
                             hideButton();
-                            $('#form-reupload').submit();
-                            showButton();
+                            $.ajax({
+                    type: "get",
+                    url: "{{ route('reupload') }}",
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader("start_date", start_date);
+                        xhr.setRequestHeader("end_date", end_date);
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        $('#reupload').html('Upload');
+                        showButton();
+                    }
+                }).fail(function(jqXHR, textStatus, errorThrown) {
+                    // Log the error to the console
+                    console.error("The following error occurred: " + textStatus, errorThrown
+                    );
+                }); 
+               
                         }
                     }
                 }).fail(function(jqXHR, textStatus, errorThrown) {
@@ -278,9 +302,9 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-success">
-                    <h5 class="modal-title" id="modalCloseCashierLabel1">Data Sudah Diupload</h5>
+                    <h5 class="modal-title" id="modalReuploadTitle">Data Sudah Diupload</h5>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" id="reupload-modal-body">
                     Data sudah diupload ke server
                 </div>
                 <div class="modal-footer">
@@ -312,8 +336,7 @@
                         </h5>
                     </div>
                     <div class="mx-3">
-                        <form method="post" class="reupload" id="form-reupload"
-                            action="{{ route('reupload') }}" enctype="multipart/form-data">
+                        <form method="post" class="reupload" id="form-reupload" enctype="multipart/form-data">
                             @csrf
                             <div class="card-body">
                                 <div class="row form-group">
@@ -321,7 +344,7 @@
                                         <div class="form-group">
                                             <a class="text-dark">Tanggal Awal<a class='red'> *</a></a>
                                             <input style="width: 50%" class="form-control input-bb" name="start_date"
-                                                id="start_date" type="date" max="{{date('Y-m-d')}}" autocomplete="off"
+                                                id="start_date_reupload" type="date" max="{{date('Y-m-d')}}" autocomplete="off"
                                                 value="{{ $start_date }}" />
                                         </div>
                                     </div>
@@ -329,7 +352,7 @@
                                         <div class="form-group">
                                             <a class="text-dark">Tanggal Akhir<a class='red'> *</a></a>
                                             <input style="width: 50%" class="form-control input-bb" name="end_date"
-                                                id="end_date" type="date" max="{{date('Y-m-d')}}" autocomplete="off"
+                                                id="end_date_reupload" type="date" max="{{date('Y-m-d')}}" autocomplete="off"
                                                 value="{{ $end_date }}" />
                                         </div>
                                     </div>

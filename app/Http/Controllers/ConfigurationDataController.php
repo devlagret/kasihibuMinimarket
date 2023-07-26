@@ -806,6 +806,9 @@ class ConfigurationDataController extends Controller
         ->where('created_at','>=',date('Y-m-d H:i', strtotime($request->header('start_date')." 00:00")))
         ->where('created_at','<=',date('Y-m-d H:i', strtotime($request->header('end_date')." 23:59")))
         ;
+        if(count($sales->get())==0&&count($salesItem->get())==0){
+            return ['status'=>3,'data' => 'no data'];
+        }
         $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/check-uploaded', [
             'start_date' => $request->header('start_date')." 00:00",
             'end_date'  => $request->header('end_date')." 23:59",
@@ -813,6 +816,7 @@ class ConfigurationDataController extends Controller
             "sales_item"=>count($salesItem->get())
         ]);
         if($response->object()->result){
+            
             DB::beginTransaction();
             try {
             $salesItem->where()->where('status_upload', 0)
@@ -829,9 +833,8 @@ class ConfigurationDataController extends Controller
             return ['status'=>1,'data' => $response->object()];
         } catch (\Throwable $th) {
             DB::rollback();
-            return ['status'=>0,$th];
+            return ['status'=>0,$th,'from catch',$response->object()];
         }
-           
         }
         return ['status'=>0,$response->body(),$response->object()->result,$request->header('start_date'),$request->header('end_date'),date('Y-m-d H:i', strtotime($request->header('end_date')." 00:00")),count($sales->get()),count($salesItem->get())];
     }
@@ -845,13 +848,13 @@ class ConfigurationDataController extends Controller
        
         $sales = SalesInvoice::
         where('company_id', Auth::user()->company_id)
-        ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->start_date)))
-        ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($request->end_date)))
+        ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->header('start_date'))))
+        ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($request->header('end_date'))))
         ->get();
         $salesItem = SalesInvoiceItem::
         where('company_id', Auth::user()->company_id)
-        ->where('created_at','>=',date('Y-m-d', strtotime($request->start_date)))
-        ->where('created_at','<=',date('Y-m-d', strtotime($request->end_date)))
+        ->where('created_at','>=',date('Y-m-d', strtotime($request->header('start_date')." 00:00")))
+        ->where('created_at','<=',date('Y-m-d', strtotime($request->header('end_date')." 23:59")))
         ->get();
         // dd([$sales,$salesItem]);            
         $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/reupload-data', [
@@ -860,15 +863,14 @@ class ConfigurationDataController extends Controller
             'sales'         => json_decode($sales, true),
             'salesItem'     => json_decode($salesItem, true),
         ]);
-        return $response;
-        return $response->object();
-        return [$sales,$salesItem];            
-        if (0) {      
-                $msg = "Data Berhasil diupload";
-                return redirect('configuration-data')->with('msg', $msg);           
+               
+        if ($response->object()->result) {    
+            session()->flash('msg','Data Berhasil diupload');
+            return ['msg'=>'Data Berhasil diupload','data'=>$response->body()];  
+                    
         } else {
-            $msg = "Data Gagal diupload";
-            return redirect('configuration-data')->with('msg', $msg);
+            session()->flash('msg','Data Gagal diupload');
+            return ['msg'=>'Data Gagal diupload','data'=>$response->body()];  
         }
     }
 }

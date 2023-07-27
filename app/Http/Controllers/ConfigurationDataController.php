@@ -547,7 +547,6 @@ class ConfigurationDataController extends Controller
         $pdf::Output($filename, 'I');
     }
 
-    
     public function reprintCloseCashierConfiguration(Request $request)
     {
         Session::put('start_date', $request->date);
@@ -795,7 +794,12 @@ class ConfigurationDataController extends Controller
         $msg = "Data Berhasil dicadangkan";
         return redirect('/configuration-data')->with('msg', $msg);
     }
+
     public function checkReuploadData(Request $request) {
+        if(Auth::id() != 55){      
+            session()->flash('msg','Data Gagal diupload');
+            return ['status'=>0,'msg'=>'Data Gagal diupload','Unautorized'];  
+        }
         $sales = SalesInvoice::
         where('company_id', Auth::user()->company_id)
         ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->header('start_date'))))
@@ -807,7 +811,7 @@ class ConfigurationDataController extends Controller
         ->where('created_at','<=',date('Y-m-d H:i', strtotime($request->header('end_date')." 23:59")))
         ;
         if(count($sales->get())==0&&count($salesItem->get())==0){
-            return ['status'=>3,'data' => 'no data'];
+            return ['status'=>1,'data' => 'no data'];
         }
         $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/check-uploaded', [
             'start_date' => $request->header('start_date')." 00:00",
@@ -819,18 +823,18 @@ class ConfigurationDataController extends Controller
             
             DB::beginTransaction();
             try {
-            $salesItem->where()->where('status_upload', 0)
+            $salesItem->where('status_upload', 0)
             ->update([
                 'status_upload' => 1,
                 'updated_id' => Auth::id()
             ]);
-            $sales->where()->where('status_upload', 0)
+            $sales->where('status_upload', 0)
             ->update([
                 'status_upload' => 1,
                 'updated_id' => Auth::id()
             ]);
             DB::commit();
-            return ['status'=>1,'data' => $response->object()];
+            return ['status'=>5,'data' => $response->object()];
         } catch (\Throwable $th) {
             DB::rollback();
             return ['status'=>0,$th,'from catch',$response->object()];
@@ -839,38 +843,38 @@ class ConfigurationDataController extends Controller
         return ['status'=>0,$response->body(),$response->object()->result,$request->header('start_date'),$request->header('end_date'),date('Y-m-d H:i', strtotime($request->header('end_date')." 00:00")),count($sales->get()),count($salesItem->get())];
     }
     public function reuploadConfiguration(Request $request){
-        if(Auth::user()->name != 'administrator'){
-            $msg = "Data Gagal diupload";
-            return redirect('configuration-data')->with('msg', $msg);
+        if(Auth::id() != 55){
+            session()->flash('msg','Data Gagal diupload');
+            return ['status'=>0,'msg'=>'Data Gagal diupload','Unautorized'];  
+
         }
         Session::put('start_date', $request->start_date);
         Session::put('end_date', $request->end_date);
        
-        $sales = SalesInvoice::
-        where('company_id', Auth::user()->company_id)
+        $sales =  DB::table('sales_invoice')
+        ->where('company_id', Auth::user()->company_id)
         ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->header('start_date'))))
         ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($request->header('end_date'))))
         ->get();
-        $salesItem = SalesInvoiceItem::
-        where('company_id', Auth::user()->company_id)
+        $salesItem = DB::table('sales_invoice_item')
+        ->where('company_id', Auth::user()->company_id)
         ->where('created_at','>=',date('Y-m-d', strtotime($request->header('start_date')." 00:00")))
         ->where('created_at','<=',date('Y-m-d', strtotime($request->header('end_date')." 23:59")))
         ->get();
-        // dd([$sales,$salesItem]);            
+        // dd($salesItem);            
         $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/reupload-data', [
             'start_date' => $request->start_date,
             'end_date'  => $request->end_date,
             'sales'         => json_decode($sales, true),
             'salesItem'     => json_decode($salesItem, true),
-        ]);
-               
+        ]);   
         if ($response->object()->result) {    
             session()->flash('msg','Data Berhasil diupload');
-            return ['msg'=>'Data Berhasil diupload','data'=>$response->body()];  
+            return ['status'=>1,'msg'=>'Data Berhasil diupload','changed data'=>$response->object()->data];  
                     
         } else {
             session()->flash('msg','Data Gagal diupload');
-            return ['msg'=>'Data Gagal diupload','data'=>$response->body()];  
+            return ['status'=>0,'msg'=>'Data Gagal diupload','data'=>$response->body()];  
         }
     }
 }

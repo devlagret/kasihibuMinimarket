@@ -8,7 +8,7 @@
         alert(session('error'));
         @endif
         if (data == 'Tutup Kasir Berhasil') {
-            var mywindow = window.open('{{ route('print-close-cashier-configuration') }}', '_blank');
+            var mywindow = window.open("{{ route('print-close-cashier-configuration') }}", '_blank');
             mywindow.print();
         } else if (data != null) {
             alert(data);
@@ -23,7 +23,7 @@
             $('#reupload').addClass('disabled');
             $('#reprint').addClass('disabled');
             hideInput();
-            console.log('disabled');
+            console.log('Buttons disabled');
         }
 
         function showButton() {
@@ -35,7 +35,7 @@
             $('#reupload').removeClass('disabled');
             $('#reprint').removeClass('disabled');
             showInput();
-            console.log('enable');
+            console.log('Buttons enable');
         }
 
         function hideInput() {
@@ -152,10 +152,10 @@
                     );
                 window.location.replace("{{ route('close-cashier-configuration') }}");
             } else if (name == "reupload") {
-                console.log('click');
+                console.log('0:click reupload');
                 hideButton();
-                var start_date = $("#start_date").val();
-                var end_date = $("#end_date").val();
+                var start_date = $("#start_date_reupload").val();
+                var end_date = $("#end_date_reupload").val();
                 $('#reupload').html('<span class=\'spinner-grow spinner-grow-sm mb-1\' role=\'status\' aria-hidden=\'true\'></span> Checking ...');
                 $.ajax({
                     type: "get",
@@ -165,7 +165,8 @@
                         xhr.setRequestHeader("end_date", end_date);
                     },
                     success: function(data) {
-                        console.log(data);
+                        console.log('Check Response:')
+                        console.log(data); 
                         if (data.status == 0) {
                             $('#modalCloseCashier1').modal('show');
                             $('#modalCloseCashierLabel1').text('Upload Ulang');
@@ -184,10 +185,11 @@
                             $('#modalReuploadTitle').text('Data Sudah Diupload')
                             $('#reupload').html('Upload');
                             showButton();
-                        } 
-                        else {
+                        } else {
                             $('#reupload').html('<span class=\'spinner-grow spinner-grow-sm mb-1\' role=\'status\' aria-hidden=\'true\'></span> Proses ...');
                             hideButton();
+                            console.log('Date range:');
+                            console.log([start_date,end_date]);
                             $.ajax({
                     type: "get",
                     url: "{{ route('reupload') }}",
@@ -196,15 +198,27 @@
                         xhr.setRequestHeader("end_date", end_date);
                     },
                     success: function(data) {
+                        console.log('Reupload response:');
                         console.log(data);
-                        $('#reupload').html('Upload');
-                        showButton();
+                        if (data.status == 0) {
+                            $('#modalCloseCashier1').modal('show');
+                            $('#modalCloseCashierLabel1').text('Upload Ulang');
+                            $('#modal-body-single').text('Upload Ulang Gagal');
+                            $('#reupload').html('Upload');
+                            showButton();
+                        } else  if (data.status == 1 ) {
+                            $('#modalReupload').modal('show');
+                            $('#reupload-modal-body').text('Data sudah diupload ke server')
+                            $('#modalReuploadTitle').text('Data Sudah Diupload')
+                            $('#reupload').html('Upload');
+                            showButton();
+                        }
                     }
-                }).fail(function(jqXHR, textStatus, errorThrown) {
-                    // Log the error to the console
-                    console.error("The following error occurred: " + textStatus, errorThrown
-                    );
-                }); 
+                    }).fail(function(jqXHR, textStatus, errorThrown) {
+                        // Log the error to the console
+                        console.error("The following error occurred: " + textStatus, errorThrown
+                        );
+                    }); 
                
                         }
                     }
@@ -326,7 +340,7 @@
         <button onclick="hideButton();buttonClick('backup_data');" id="backup_data" class="btn btn-success btn-lg mx-2">
             <i class="fa fa-cloud"></i> Candangkan Data</button>
     </div>
-    @if (Auth::user()->name == 'administrator')
+    @if (Auth::id() == 55)
         <div class="row">
             <div class="col-md-12">
                 <div class="card border border-gray">
@@ -363,9 +377,6 @@
                                     <button type="button" id="reupload" name="Save"
                                         onclick="hideButton();buttonClick('reupload');" class="btn btn-success"
                                         title="Save">Upload</button>
-                                        <button type="submit" id="reupload" name="Save"
-                                     class="btn btn-success"
-                                        title="Save">submit</button>
                                 </div>
                             </div>
                         </form>

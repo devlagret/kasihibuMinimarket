@@ -355,6 +355,7 @@ Route::get('/configuration-data/check-close-cashier',[ConfigurationDataControlle
 Route::get('/configuration-data/close-cashier',[ConfigurationDataController::class,'closeCashierConfiguration'])->name('close-cashier-configuration');
 Route::get('/configuration-data/print-close-cashier',[ConfigurationDataController::class,'printCloseCashierConfiguration'])->name('print-close-cashier-configuration');
 Route::get('/configuration-data/backup-data', [ConfigurationDataController::class, 'backupDataConfiguration'])->name('backup-data-configuration');
+Route::post('/configuration-data/test', [ConfigurationDataController::class, 'test'])->name('test');
 
 Route::get('/consolidated-receipts-report', [ConsolidatedReceiptsReportController::class, 'index'])->name('consolidated-receipts-report');
 Route::post('/consolidated-receipts-report/filter', [ConsolidatedReceiptsReportController::class, 'filterConsolidatedReceiptsReport'])->name('filter-consolidated-receipts-report');

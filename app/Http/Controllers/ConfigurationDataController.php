@@ -877,7 +877,7 @@ class ConfigurationDataController extends Controller
             return ['status'=>0,'msg'=>'Data Gagal diupload','data'=>$response->body()];  
         }
     }
-    public function test(Request $request) {
-        dd($request->all());
+    public function test() {
+        dd(['header'=>[0],'data'=>[0=>['data1','no apa','isi'=>[3]],1=>['data1','no apa','isi'=>[3]],2=>['data1','no apa','isi'=>[3]]]]);
     }
 }

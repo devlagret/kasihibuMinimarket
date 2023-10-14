@@ -151,7 +151,7 @@ Route::get('/sales-invoice/detail/{sales_invoice_id}',[SalesInvoiceController::c
 Route::get('/sales-invoice/delete/{sales_invoice_id}',[SalesInvoiceController::class, 'deleteSalesInvoice'])->name('delete-sales-invoice');
 Route::get('/sales-invoice/filter-reset',[SalesInvoiceController::class, 'filterResetSalesInvoice'])->name('filter-reset-sales-invoice');
 Route::post('/sales-invoice/filter',[SalesInvoiceController::class, 'filterSalesInvoice'])->name('filter-sales-invoice');
-Route::get('/sales-invoice/print',[SalesInvoiceController::class, 'printSalesInvoice'])->name('print-sales-invoice');
+Route::get('/sales-invoice/print/{token?}',[SalesInvoiceController::class, 'printSalesInvoice'])->name('print-sales-invoice');
 Route::get('/sales-invoice/print-repeat/{sales_invoice_id}',[SalesInvoiceController::class, 'printRepeatSalesInvoice'])->name('print-repeat-sales-invoice');
 Route::post('/sales-invoice/check-customer',[SalesInvoiceController::class, 'checkCustomerSalesInvoice'])->name('check-customer-sales-invoice');
 Route::post('/sales-invoice/select-voucher',[SalesInvoiceController::class, 'selectVoucherSalesInvoice'])->name('select-voucher-sales-invoice');

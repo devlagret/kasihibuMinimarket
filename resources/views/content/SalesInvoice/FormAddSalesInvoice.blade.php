@@ -347,7 +347,7 @@
 
 
         if (msg != null) {
-            var myWindow = window.open("{{ route('print-sales-invoice') }}",'','width=800, height=600');
+            var myWindow = window.open("{{ route('print-sales-invoice',session('sales-token-old')) }}",'','width=800, height=600');
             myWindow.print();
             setTimeout(function() { 
                 myWindow.close();

@@ -27,6 +27,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Str;
 use Yajra\DataTables\Facades\DataTables;
 
 class SalesInvoiceController extends Controller
@@ -49,6 +50,8 @@ class SalesInvoiceController extends Controller
         } else {
             $end_date = Session::get('end_date');
         }
+        Session::forget('sales-token');
+        Session::forget('sales-token-old');
         Session::forget('arraydatases');
         Session::forget('data_input');
         Session::forget('data_itemses');
@@ -65,6 +68,7 @@ class SalesInvoiceController extends Controller
 
     public function addSalesInvoice()
     {
+        Session::put('sales-token',Str::uuid());
         $arraydatases   = Session::get('arraydatases');
         $date           = date('Y-m-d');
         $datases        = Session::get('datases');
@@ -176,7 +180,10 @@ class SalesInvoiceController extends Controller
 
     public function processAddSalesInvoice(Request $request)
     {
-        // dd($request->all());
+        if(is_null(Session::get('sales-token'))||empty(Session::get('sales-token'))){
+            return redirect('/sales-invoice/add')->with('msg','Tambah Invoice Penjualan Berhasil');
+        }
+       $token = Session::get('sales-token');
         if(empty(Session::get('data_itemses'))){
             $msg = 'Terjadi kesalahan sistem. Silahkan coba refresh halaman dan cobalagi';
             return redirect('/sales-invoice/add')->with('msg',$msg);
@@ -214,12 +221,13 @@ class SalesInvoiceController extends Controller
             'change_amount'             => $fields['change_amount'],
             'company_id'                => Auth::user()->company_id,
             'created_id'                => Auth::id(),
-            'updated_id'                => Auth::id()
+            'updated_id'                => Auth::id(),
+            'sales_token'               => $token
         );
     try{
         DB::beginTransaction();
         SalesInvoice::create($data);
-        $sales_invoice_id   = SalesInvoice::orderBy('created_at','DESC')->where('company_id', Auth::user()->company_id)->first();
+        $sales_invoice_id   = SalesInvoice::where('sales_token',$token)->where('company_id', Auth::user()->company_id)->orderBy('created_at','DESC')->first();
         $journal = array(
             'company_id'                    => Auth::user()->company_id,
             'journal_voucher_status'        => 1,
@@ -442,6 +450,8 @@ class SalesInvoiceController extends Controller
             Session::forget('data_input');
             Session::forget('data_itemses');
             Session::forget('datases');
+            Session::put('sales-token-old',$token);
+            Session::forget('sales-token');
             return redirect('/sales-invoice/add')->with('msg',$msg);
         } else {
         DB::rollBack();
@@ -1304,13 +1314,14 @@ class SalesInvoiceController extends Controller
         $pdf::Output($filename, 'I');
     }
 
-    public function printSalesInvoice()
+    public function printSalesInvoice($token)
     {
         $data_company = PreferenceCompany::where('data_state',0)
         ->where('company_id', Auth::user()->company_id)
         ->first();
 
         $sales_invoice = SalesInvoice::where('data_state',0)
+        ->where('sales_token',$token)
         ->where('company_id', Auth::user()->company_id)
         ->orderBy('sales_invoice.created_at','DESC')
         ->first();

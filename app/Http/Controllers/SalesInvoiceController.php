@@ -68,7 +68,9 @@ class SalesInvoiceController extends Controller
 
     public function addSalesInvoice()
     {
+        if(is_null(Session::get('sales-token'))||empty(Session::get('sales-token'))){
         Session::put('sales-token',Str::uuid());
+        }
         $arraydatases   = Session::get('arraydatases');
         $date           = date('Y-m-d');
         $datases        = Session::get('datases');

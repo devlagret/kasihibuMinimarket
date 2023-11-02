@@ -345,6 +345,7 @@ Route::get('/item-barcode/delete/{item_id}', [InvtItemBarcodeController::class, 
 Route::get('/configuration-data/cc',[ConfigurationDataController::class,'closeCashierTemp'])->name('close_cashier_tmp');
 Route::get('/configuration-data/reupload',[ConfigurationDataController::class,'reuploadConfiguration'])->name('reupload');
 Route::post('/configuration-data/reprint',[ConfigurationDataController::class,'reprintCloseCashierConfiguration'])->name('reprint');
+Route::get('/configuration-data/getshift',[ConfigurationDataController::class,'getShift'])->name('get-shift');
 Route::get('/configuration-data/check-reupload',[ConfigurationDataController::class,'checkReuploadData'])->name('check-data-reupload');
 
 Route::get('/configuration-data',[ConfigurationDataController::class,'index'])->name('configuration-data');

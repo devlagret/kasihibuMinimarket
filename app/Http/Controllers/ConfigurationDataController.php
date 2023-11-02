@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Str;
 use Prophecy\Doubler\Generator\Node\ReturnTypeNode;
 
 class ConfigurationDataController extends Controller
@@ -43,6 +44,9 @@ class ConfigurationDataController extends Controller
     //     $data = 0;
     //    }
     //     session()->flash('data', $data);
+    if (empty(Session::get('close-cashier-token'))||is_null(Session::get('close-cashier-token'))) {
+        Session::put('close-cashier-token',Str::uuid());
+    }
     if (!Session::get('start_date')) {
         $start_date = date('Y-m-d');
     } else {
@@ -53,14 +57,8 @@ class ConfigurationDataController extends Controller
     } else {
         $end_date = Session::get('end_date');
     }
-    if (!Session::get('date')) {
-        $date = Carbon::now()->subday()->format('Y-m-d');
-    } else {
-        $date = Session::get('date');
+        return view('content.ConfigurationData.ConfigurationData',compact('start_date', 'end_date', ));
     }
-        return view('content.ConfigurationData.ConfigurationData',compact('start_date', 'end_date', 'date'));
-    }
-    
 
     public function checkDataConfiguration()
     {
@@ -169,6 +167,10 @@ class ConfigurationDataController extends Controller
 
     public function uploadConfigurationData()
     {
+        if (empty(Session::get('close-cashier-token'))||is_null(Session::get('close-cashier-token'))) {
+            $msg = "Data Berhasil diupload";
+            return redirect('configuration-data')->with('msg', $msg);
+        }
         //use Database: Query Builder (DB) not laravel eqloquent or date will be error on server side (not same)
         $sales = DB::table('sales_invoice')
         ->where('status_upload',0)
@@ -253,10 +255,12 @@ class ConfigurationDataController extends Controller
 
                 DB::commit();
                 $msg = "Data Berhasil diupload";
+                Session::forget('close-cashier-token');
                 return redirect('configuration-data')->with('msg', $msg);
 
             } catch (\Throwable $th) {
                 $data=$response->object();
+                Session::forget('close-cashier-token');
                 session()->flash('error', [$th,$data]);
                 DB::rollback();
                 $msg = "Data Gagal diupload";
@@ -309,14 +313,15 @@ class ConfigurationDataController extends Controller
 
     public function closeCashierConfiguration()
     {
-        // ! change
         $time= CloseCashierLog::where('created_at','>',Carbon::now()->subHours())->where('cashier_log_date','=',Carbon::now()->format('Y-m-d'))->get('created_at');
         if(count($time)==1){
             $msg = "Shift 1 Sudah Ditutup, Shift 2 Masih Berlangsung Panjang";
             return redirect('/configuration-data')->with('msg',$msg);
         }
-        //!
-      
+        if (empty(Session::get('close-cashier-token'))||is_null(Session::get('close-cashier-token'))) {
+            $msg = "Tutup Kasir Berhasil";
+            return redirect('/configuration-data')->with('msg',$msg);
+        }
         $sales_invoice = SalesInvoice::where('data_state',0)
         ->whereDate('sales_invoice_date', date('Y-m-d'))
         ->where('company_id', Auth::user()->company_id)
@@ -391,9 +396,11 @@ class ConfigurationDataController extends Controller
 
         if (CloseCashierLog::create($data_close_cashier)) {
             $msg = "Tutup Kasir Berhasil";
+            Session::forget('close-cashier-token');
             return redirect('/configuration-data')->with('msg',$msg);
         } else {
             $msg = "Tutup Kasir Gagal";
+            Session::forget('close-cashier-token');
             return redirect('/configuration-data')->with('msg',$msg);
         }
     }
@@ -596,7 +603,12 @@ class ConfigurationDataController extends Controller
             <tr>
                 <td width=\"25%\">TGL.</td>
                 <td width=\"10%\" style=\"text-align: center;\">:</td>
-                <td width=\"60%\">".date('d-m-Y')."  ".date('H:i')."</td>
+                <td width=\"60%\">".date('d-m-Y H:i',strtotime($data->created_at))."</td>
+            </tr>
+            <tr>
+                <td width=\"25%\">TGL. CETAK</td>
+                <td width=\"10%\" style=\"text-align: center;\">:</td>
+                <td width=\"60%\">".date('d-m-Y H:i')."</td>
             </tr>
             <tr>
                 <td width=\"25%\">SHIFT</td>
@@ -879,5 +891,16 @@ class ConfigurationDataController extends Controller
     }
     public function test() {
         dd(['header'=>[0],'data'=>[0=>['data1','no apa','isi'=>[3]],1=>['data1','no apa','isi'=>[3]],2=>['data1','no apa','isi'=>[3]]]]);
+    }
+    public function getShift(Request $request) {
+          $data = CloseCashierLog::where('data_state',0)
+          ->where('company_id', Auth::user()->company_id)
+          ->where('cashier_log_date','=',date('Y-m-d', strtotime($request->date)))
+          ->get();
+          $response = '';
+          foreach ($data as $key => $value) {
+            $response .= "<option data-kt-flag='".$value->shift_cashier."' value='".$value->shift_cashier."' ".($value->shift_cashier == old('shift_cashier', $request->shift_cashier_old ?? '') ? 'selected' :'')."  >". $value->shift_cashier."</option>";
+          }
+          return response($response);
     }
 }

@@ -232,6 +232,23 @@
             }
 
         }
+        function getShift(date) {
+            $.ajax({
+                type: "get",
+                url: "{{route('get-shift')}}",
+                data: {
+                    'date' : date
+                },
+                dataType: "html",
+                success: function (response) {
+                    console.log(response);
+                    $('#shift').html(response);
+                }
+            });
+         }
+         $(document).ready(function () {
+            getShift($('#date').val());
+         });
     </script>
 @endsection
 @section('content_header')
@@ -384,7 +401,8 @@
                 </div>
             </div>
         </div>
-        @if (0)
+        @endif
+        @if (1)
             <div class="row">
                 <div class="col-md-12">
                     <div class="card border border-gray">
@@ -403,14 +421,14 @@
                                             <div class="form-group">
                                                 <a class="text-dark">Tanggal<a class='red'> *</a></a>
                                                 <input style="width: 50%" class="form-control input-bb" name="date"
-                                                    id="date" type="date" max="{{ $date }}"
-                                                    autocomplete="off" value="{{ $date }}" />
+                                                    id="date" type="date" max="{{ date('Y-m-d') }}"
+                                                    autocomplete="off" value="{{ date('Y-m-d') }}" onchange="getShift(this.value)"/>
                                             </div>
                                         </div>
-                                        <div class="col-md-1">
+                                        <div class="col-md-3">
                                             <div class="form-group">
                                                 <a class="text-dark">Shift<a class='red'> *</a></a>
-                                                <select class="form-control" name="shift">
+                                                <select class="selection-search-clear select-form form-control" id="shift" name="shift">
                                                     <option value="1">1</option>
                                                     <option value="2">2</option>>
                                                 </select>
@@ -430,7 +448,6 @@
                 </div>
             </div>
         @endif
-    @endif
 
 @stop
 

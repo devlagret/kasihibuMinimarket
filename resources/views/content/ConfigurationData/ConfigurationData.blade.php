@@ -346,8 +346,8 @@
     </div>
     <div style="display: flex; justify-content: center; align-items: center; height: 150px; ">
 
-        <button onclick="hideButton();buttonClick('close_cashier_temp');" id="close_cashier_temp" class="btn btn-success btn-lg mx-2">
-            <i class="fa fa-archive"></i> Tutup kasir 03-07-2023 shift 2</button>
+        {{-- <button onclick="hideButton();buttonClick('close_cashier_temp');" id="close_cashier_temp" class="btn btn-success btn-lg mx-2">
+            <i class="fa fa-archive"></i> Tutup kasir 03-07-2023 shift 2</button> --}}
         <button onclick="hideButton();buttonClick('download_data');" id="download_data" class="btn btn-success btn-lg mx-2">
             <i class="fa fa-download"></i> Download Data</button>
         <button onclick="hideButton();buttonClick('upload_data');" id="upload_data" class="btn btn-success btn-lg mx-2">
@@ -401,7 +401,7 @@
                 </div>
             </div>
         </div>
-        @endif
+    @endif
         @if (1)
             <div class="row">
                 <div class="col-md-12">

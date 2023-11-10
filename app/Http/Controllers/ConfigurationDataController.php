@@ -64,7 +64,7 @@ class ConfigurationDataController extends Controller
     {
         $response = Http::get(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/get-data-item-stock');
         $result_item_stock = json_decode($response,TRUE);
-        
+
         foreach ($result_item_stock as $key => $val) {
             $data_stock[$key] = InvtItemStock::where('company_id', Auth::user()->company_id)
             ->where('item_id', $val['item_id'])
@@ -286,14 +286,16 @@ class ConfigurationDataController extends Controller
         ->whereDate('cashier_log_date', date('Y-m-d'))
         ->orderByDesc('created_at')
         ->get();
-    
+
         if(count($data)==0){
             return ["status"=>0,"msg"=>"Tutup shift 1"];
         }elseif(count($time)>=1&&count($data)>=1){
+            if(count($data)>1){
             if($data[0]->created_at!=$data[1]->created_at){
                 return ["status"=>count($data), "msg"=>"the last one"];
             }
-            return ["status"=>3,"time"=>Carbon::now()->subHours(),"count"=>[count($time),count($data)],"msg"=>"Shift 1 sudah ditutup, shift 2 masih panjang ("
+        }
+            return ["status"=>1,"time"=>Carbon::now()->subHours(),"count"=>[count($time),count($data)],"msg"=>"Shift 1 sudah ditutup, shift 2 masih panjang ("
             .Carbon::parse($time[0]->created_at)->addHour()->diff(Carbon::now())->format('%H:%I:%S').")"];
         }else if(count($data)>1&&count($time)==0){
               //js loging avaible at blade
@@ -308,7 +310,7 @@ class ConfigurationDataController extends Controller
            }
         }
         return ["status"=>count($data), "msg"=>"the last one"];
-    
+
     }
 
     public function closeCashierConfiguration()
@@ -330,10 +332,7 @@ class ConfigurationDataController extends Controller
         ->where('company_id', Auth::user()->company_id)
         ->whereDate('cashier_log_date', date('Y-m-d'))
         ->get();
-        $first_cashier = CloseCashierLog::where('data_state',0)
-        ->where('company_id', Auth::user()->company_id)
-        ->whereDate('cashier_log_date', date('Y-m-d'))
-        ->first();
+        $first_cashier = $this->recalcCCLog(date('Y-m-d'),1);
 
         $total_cash_transaction         = 0;
         $amount_cash_transaction        = 0;
@@ -414,7 +413,7 @@ class ConfigurationDataController extends Controller
         ->where('sales_invoice_date','<=',date('Y-m-d', strtotime($end_date)))
         ->whereTime('created_at','>=',date('H:i:00', strtotime($start_date)))
         ->whereTime('created_at','<=',date('H:i:00', strtotime($end_date)))->get()
-        ;   
+        ;
 
         $total_transaction = 0;
         $total_amount = 0;
@@ -424,7 +423,7 @@ class ConfigurationDataController extends Controller
         $amount_cashless_transaction = 0;
         $total_cash_transaction = 0;
         $amount_cash_transaction = 0;
-    
+
         foreach ($data as $key => $val) {
             if ($val['sales_payment_method'] != null) {
                 if ($val['sales_payment_method'] == 1) {
@@ -464,7 +463,7 @@ class ConfigurationDataController extends Controller
 
         $pdf::SetFont('helvetica', '', 10);
 
-        $tbl = " 
+        $tbl = "
         <table style=\" font-size:9px; \" >
             <tr>
                 <td style=\"text-align: center; font-size:12px; font-weight: bold\">".$data_company['company_name']."</td>
@@ -475,7 +474,7 @@ class ConfigurationDataController extends Controller
         </table>
         ";
         $pdf::writeHTML($tbl, true, false, false, false, '');
-            
+
         $tblStock1 = "
         <div>-------------------------------------------------------</div>
         <table style=\" font-size:9px; \" border=\"0\">
@@ -544,7 +543,7 @@ class ConfigurationDataController extends Controller
             </tr>
         </table>
         <div>-------------------------------------------------------</div>
-        
+
         ";
 
         $pdf::writeHTML($tblStock1.$tblStock2, true, false, false, false, '');
@@ -557,16 +556,61 @@ class ConfigurationDataController extends Controller
     public function reprintCloseCashierConfiguration(Request $request)
     {
         Session::put('start_date', $request->date);
-        $data = CloseCashierLog::where('data_state',0)
-        ->where('company_id', Auth::user()->company_id)
-        ->where('cashier_log_date','=',date('Y-m-d', strtotime($request->date)))
-        ->where('shift_cashier','=',$request->shift)
-        ->first();
+        $total_cash_transaction         = 0;
+        $amount_cash_transaction        = 0;
+        $total_receivable_transaction   = 0;
+        $amount_receivable_transaction  = 0;
+        $total_cashless_transaction     = 0;
+        $amount_cashless_transaction    = 0;
+        $total_transaction              = 0;
+        $total_amount                   = 0;
 
+        $datas = CloseCashierLog::where('data_state',0)
+        ->where('company_id', Auth::user()->company_id)
+        ->where('cashier_log_date','=',date('Y-m-d', strtotime($request->date)))->get();
+        $data = $datas->where('shift_cashier',1)->first();
+        $sd = date('Y-m-d H:i:s', strtotime($data->created_at));
+        if($request->shift==1){
+            $sd = date('Y-m-d H:i:s', strtotime($request->date));
+        }
+        $data = $datas->where('shift_cashier',$request->shift)->first();
+        $sales_invoice = SalesInvoice::where('data_state',0)
+        ->where('created_at','>=', $sd)
+        ->where('created_at','<=', $data->created_at)
+        ->where('company_id', Auth::user()->company_id)
+        ->get();
+        // dd($sales_invoice);
         $data_company = PreferenceCompany::where('data_state',0)
         ->where('company_id', Auth::user()->company_id)
         ->first();
-        
+        foreach ($sales_invoice as $key => $val) {
+            if ($val['sales_payment_method'] == 1) {
+                $total_cash_transaction += 1;
+                $amount_cash_transaction += $val['total_amount'];
+            } else if ($val['sales_payment_method'] == 2) {
+                $total_receivable_transaction += 1;
+                $amount_receivable_transaction += $val['total_amount'];
+            } else {
+                $total_cashless_transaction += 1;
+                $amount_cashless_transaction += $val['total_amount'];
+            }
+
+            $total_transaction += 1;
+            $total_amount +=  $val['total_amount'];
+        }
+        $update = CloseCashierLog::where('data_state',0)
+        ->where('company_id', Auth::user()->company_id)
+        ->where('cashier_log_date','=',date('Y-m-d', strtotime($request->date)))
+        ->where('shift_cashier',$request->shift)->first();
+        $update->total_cash_transaction         =$total_cash_transaction;
+        $update->amount_cash_transaction        =$amount_cash_transaction;
+        $update->total_receivable_transaction   =$total_receivable_transaction;
+        $update->amount_receivable_transaction  =$amount_receivable_transaction;
+        $update->total_cashless_transaction     =$total_cashless_transaction;
+        $update->amount_cashless_transaction    =$amount_cashless_transaction;
+        $update->total_transaction              =$total_transaction;
+        $update->total_amount                   =$total_amount;
+        $update->save();
         $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
         $pdf::SetPrintHeader(false);
@@ -585,7 +629,7 @@ class ConfigurationDataController extends Controller
 
         $pdf::SetFont('dejavusans', '', 10);
 
-        $tbl = " 
+        $tbl = "
         <table style=\" font-size:9px; \" >
             <tr>
                 <td style=\"text-align: center; font-size:12px; font-weight: bold\">".$data_company['company_name']."</td>
@@ -596,7 +640,7 @@ class ConfigurationDataController extends Controller
         </table>
         ";
         $pdf::writeHTML($tbl, true, false, false, false, '');
-            
+
         $tblStock1 = "
         <div>---------------------------------------------------</div>
         <table style=\" font-size:9px; \">
@@ -634,33 +678,33 @@ class ConfigurationDataController extends Controller
             </tr>
             <tr>
                 <td width=\" 35% \" style=\"text-align: left;\">TOTAL</td>
-                <td width=\" 25% \" style=\"text-align: right;\">(".$data['total_transaction'].")</td>
+                <td width=\" 25% \" style=\"text-align: right;\">(".$total_transaction.")</td>
                 <td width=\" 7% \" style=\"text-align: right;\">:</td>
-                <td width=\" 33% \" style=\"text-align: right;\">".number_format($data['total_amount'],0,',','.')."</td>
+                <td width=\" 33% \" style=\"text-align: right;\">".number_format($total_amount,0,',','.')."</td>
             </tr>
             <tr>
                 <td width=\" 35% \" style=\"text-align: left;\">PIUTANG</td>
-                <td width=\" 25% \" style=\"text-align: right;\">(".$data['total_receivable_transaction'].")</td>
+                <td width=\" 25% \" style=\"text-align: right;\">(".$total_receivable_transaction.")</td>
                 <td width=\" 7% \" style=\"text-align: right;\">:</td>
-                <td width=\" 33% \" style=\"text-align: right;\">".number_format($data['amount_receivable_transaction'],0,',','.')."</td>
+                <td width=\" 33% \" style=\"text-align: right;\">".number_format($amount_receivable_transaction,0,',','.')."</td>
             </tr>
             <tr>
                 <td width=\" 35% \" style=\"text-align: left;\">E-WALLET</td>
-                <td width=\" 25% \" style=\"text-align: right;\">(".$data['total_cashless_transaction'].")</td>
+                <td width=\" 25% \" style=\"text-align: right;\">(".$total_cashless_transaction.")</td>
                 <td width=\" 7% \" style=\"text-align: right;\">:</td>
-                <td width=\" 33% \" style=\"text-align: right;\">".number_format($data['amount_cashless_transaction'],0,',','.')."</td>
+                <td width=\" 33% \" style=\"text-align: right;\">".number_format($amount_cashless_transaction,0,',','.')."</td>
             </tr>
             <tr>
                 <td width=\" 35% \" style=\"text-align: left;\">TUNAI</td>
-                <td width=\" 25% \" style=\"text-align: right;\">(".$data['total_cash_transaction'].")</td>
+                <td width=\" 25% \" style=\"text-align: right;\">(".$total_cash_transaction.")</td>
                 <td width=\" 7% \" style=\"text-align: right;\">:</td>
-                <td width=\" 33% \" style=\"text-align: right;\">".number_format($data['amount_cash_transaction'],0,',','.')."</td>
+                <td width=\" 33% \" style=\"text-align: right;\">".number_format($amount_cash_transaction,0,',','.')."</td>
             </tr>
             <tr>
                 <td width=\" 45% \" style=\"text-align: left;\">DISETOR</td>
                 <td width=\" 15% \" style=\"text-align: right;\"></td>
                 <td width=\" 7% \" style=\"text-align: right;\">:</td>
-                <td width=\" 33% \" style=\"text-align: right;\">".number_format($data['amount_cash_transaction'],0,',','.')."</td>
+                <td width=\" 33% \" style=\"text-align: right;\">".number_format($amount_cash_transaction,0,',','.')."</td>
             </tr>
             <tr>
                 <td width=\" 45% \" style=\"text-align: left;\">SALDO AKHIR</td>
@@ -670,7 +714,7 @@ class ConfigurationDataController extends Controller
             </tr>
         </table>
         <div>---------------------------------------------------</div>
-        
+
         ";
 
         $pdf::writeHTML($tblStock1.$tblStock2, true, false, false, false, '');
@@ -709,7 +753,7 @@ class ConfigurationDataController extends Controller
 
         $pdf::SetFont('dejavusans', '', 10);
 
-        $tbl = " 
+        $tbl = "
         <table style=\" font-size:9px; \" >
             <tr>
                 <td style=\"text-align: center; font-size:12px; font-weight: bold\">".$data_company['company_name']."</td>
@@ -720,7 +764,7 @@ class ConfigurationDataController extends Controller
         </table>
         ";
         $pdf::writeHTML($tbl, true, false, false, false, '');
-            
+
         $tblStock1 = "
         <div>---------------------------------------------------</div>
         <table style=\" font-size:9px; \">
@@ -789,7 +833,7 @@ class ConfigurationDataController extends Controller
             </tr>
         </table>
         <div>---------------------------------------------------</div>
-        
+
         ";
 
         $pdf::writeHTML($tblStock1.$tblStock2, true, false, false, false, '');
@@ -808,9 +852,9 @@ class ConfigurationDataController extends Controller
     }
 
     public function checkReuploadData(Request $request) {
-        if(Auth::id() != 55){      
+        if(Auth::id() != 55){
             session()->flash('msg','Data Gagal diupload');
-            return ['status'=>0,'msg'=>'Data Gagal diupload','Unautorized'];  
+            return ['status'=>0,'msg'=>'Data Gagal diupload','Unautorized'];
         }
         $sales = SalesInvoice::
         where('company_id', Auth::user()->company_id)
@@ -832,7 +876,7 @@ class ConfigurationDataController extends Controller
             "sales_item"=>count($salesItem->get())
         ]);
         if($response->object()->result){
-            
+
             DB::beginTransaction();
             try {
             $salesItem->where('status_upload', 0)
@@ -857,12 +901,12 @@ class ConfigurationDataController extends Controller
     public function reuploadConfiguration(Request $request){
         if(Auth::id() != 55){
             session()->flash('msg','Data Gagal diupload');
-            return ['status'=>0,'msg'=>'Data Gagal diupload','Unautorized'];  
+            return ['status'=>0,'msg'=>'Data Gagal diupload','Unautorized'];
 
         }
         Session::put('start_date', $request->start_date);
         Session::put('end_date', $request->end_date);
-       
+
         $sales =  DB::table('sales_invoice')
         ->where('company_id', Auth::user()->company_id)
         ->where('sales_invoice_date','>=',date('Y-m-d', strtotime($request->header('start_date'))))
@@ -873,20 +917,20 @@ class ConfigurationDataController extends Controller
         ->where('created_at','>=',date('Y-m-d', strtotime($request->header('start_date')." 00:00")))
         ->where('created_at','<=',date('Y-m-d', strtotime($request->header('end_date')." 23:59")))
         ->get();
-        // dd($salesItem);            
+        // dd($salesItem);
         $response = Http::post(env('API_URL', 'https://ciptapro.com/kasihibu_minimarket').'/api/reupload-data', [
             'start_date' => $request->start_date,
             'end_date'  => $request->end_date,
             'sales'         => json_decode($sales, true),
             'salesItem'     => json_decode($salesItem, true),
-        ]);   
-        if ($response->object()->result) {    
+        ]);
+        if ($response->object()->result) {
             session()->flash('msg','Data Berhasil diupload');
-            return ['status'=>1,'msg'=>'Data Berhasil diupload','changed data'=>$response->object()->data];  
-                    
+            return ['status'=>1,'msg'=>'Data Berhasil diupload','changed data'=>$response->object()->data];
+
         } else {
             session()->flash('msg','Data Gagal diupload');
-            return ['status'=>0,'msg'=>'Data Gagal diupload','data'=>$response->body()];  
+            return ['status'=>0,'msg'=>'Data Gagal diupload','data'=>$response->body()];
         }
     }
     public function test() {
@@ -902,5 +946,55 @@ class ConfigurationDataController extends Controller
             $response .= "<option data-kt-flag='".$value->shift_cashier."' value='".$value->shift_cashier."' ".($value->shift_cashier == old('shift_cashier', $request->shift_cashier_old ?? '') ? 'selected' :'')."  >". $value->shift_cashier."</option>";
           }
           return response($response);
+    }
+    protected function getSIByCloseCashierLog($date,$shift=1) {
+        $datas = CloseCashierLog::where('data_state',0)
+        ->where('company_id', Auth::user()->company_id)
+        ->where('cashier_log_date','=',date('Y-m-d', strtotime($date)))->get();
+        $datas1 = $datas->where('shift_cashier',1)->first();
+        $sd = date('Y-m-d H:i:s', strtotime($datas1->created_at));
+        if($shift==1){
+            $sd = date('Y-m-d H:i:s', strtotime($date));        }
+        $data = $datas->where('shift_cashier',$shift)->first();
+        $sales_invoice = SalesInvoice::where('data_state',0)
+        ->where('created_at','>=', $sd)
+        ->where('created_at','<=', $data->created_at)
+        ->where('company_id', Auth::user()->company_id)
+        ->get();
+        return $sales_invoice;
+    }
+    protected function recalcCCLog($date,$shift=1) {
+        $total_cash_transaction         = 0;
+        $amount_cash_transaction        = 0;
+        $total_receivable_transaction   = 0;
+        $amount_receivable_transaction  = 0;
+        $total_cashless_transaction     = 0;
+        $amount_cashless_transaction    = 0;
+        $total_transaction              = 0;
+        $total_amount                   = 0;
+        $sales_invoice=$this->getSIByCloseCashierLog($date,$shift);
+        foreach ($sales_invoice as $key => $val) {
+            if ($val['sales_payment_method'] == 1) {
+                $total_cash_transaction += 1;
+                $amount_cash_transaction += $val['total_amount'];
+            } else if ($val['sales_payment_method'] == 2) {
+                $total_receivable_transaction += 1;
+                $amount_receivable_transaction += $val['total_amount'];
+            } else {
+                $total_cashless_transaction += 1;
+                $amount_cashless_transaction += $val['total_amount'];
+            }
+
+            $total_transaction += 1;
+            $total_amount +=  $val['total_amount'];
+        }
+        return ['total_cash_transaction'        => $total_cash_transaction,
+                'amount_cash_transaction'       => $amount_cash_transaction,
+                'total_receivable_transaction'  => $total_receivable_transaction,
+                'amount_receivable_transaction' => $amount_receivable_transaction,
+                'total_cashless_transaction'    => $total_cashless_transaction,
+                'amount_cashless_transaction'   => $amount_cashless_transaction,
+                'total_transaction'             => $total_transaction,
+                'total_amount'                  => $total_amount                ];
     }
 }

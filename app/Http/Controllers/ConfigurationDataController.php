@@ -21,7 +21,6 @@ use App\Models\SIIRemoveLog;
 use App\Models\SystemLoginLog;
 use Elibyy\TCPDF\Facades\TCPDF;
 use Illuminate\Http\Request;
-// *change
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -90,7 +89,15 @@ class ConfigurationDataController extends Controller
                     CoreMember::create($val);
                 }
             }
-
+            foreach ($response['sales'] as $key => $val) {
+                if ($val['company_id'] == Auth::user()->company_id) {
+                   $si= SalesInvoice::where('sales_invoice_no',$val['sales_invoice_no']??0)->first();
+                   if(!empty($si)){
+                   $si->data_state =$val['data_state'];
+                   $si->save();
+                   }
+                }
+            }
             InvtItemCategory::select(DB::statement('SET FOREIGN_KEY_CHECKS = 0'))->truncate();
             foreach ($response['category'] as $key => $val) {
                 if ($val['company_id'] == Auth::user()->company_id) {
@@ -316,10 +323,10 @@ class ConfigurationDataController extends Controller
     public function closeCashierConfiguration()
     {
         $time= CloseCashierLog::where('created_at','>',Carbon::now()->subHours())->where('cashier_log_date','=',Carbon::now()->format('Y-m-d'))->get('created_at');
-        if(count($time)==1){
-            $msg = "Shift 1 Sudah Ditutup, Shift 2 Masih Berlangsung Panjang";
-            return redirect('/configuration-data')->with('msg',$msg);
-        }
+        // if(count($time)==1){
+        //     $msg = "Shift 1 Sudah Ditutup, Shift 2 Masih Berlangsung Panjang";
+        //     return redirect('/configuration-data')->with('msg',$msg);
+        // }
         if (empty(Session::get('close-cashier-token'))||is_null(Session::get('close-cashier-token'))) {
             $msg = "Tutup Kasir Berhasil";
             return redirect('/configuration-data')->with('msg',$msg);
@@ -358,7 +365,6 @@ class ConfigurationDataController extends Controller
             $total_transaction += 1;
             $total_amount +=  $val['total_amount'];
         }
-
         if (count($close_cashier) == 1) {
             $data_close_cashier = array(
                 'company_id' => Auth::user()->company_id,
@@ -951,14 +957,21 @@ class ConfigurationDataController extends Controller
         $datas = CloseCashierLog::where('data_state',0)
         ->where('company_id', Auth::user()->company_id)
         ->where('cashier_log_date','=',date('Y-m-d', strtotime($date)))->get();
+        if($shift!=1){
         $datas1 = $datas->where('shift_cashier',1)->first();
         $sd = date('Y-m-d H:i:s', strtotime($datas1->created_at));
+        }
         if($shift==1){
-            $sd = date('Y-m-d H:i:s', strtotime($date));        }
+        $sd = date('Y-m-d H:i:s', strtotime($date));        }
         $data = $datas->where('shift_cashier',$shift)->first();
+        if(empty($data)){
+            $ed = date('Y-m-d H:i:s');
+        }else{
+            $ed = $data->created_at;
+        }
         $sales_invoice = SalesInvoice::where('data_state',0)
         ->where('created_at','>=', $sd)
-        ->where('created_at','<=', $data->created_at)
+        ->where('created_at','<=', $ed)
         ->where('company_id', Auth::user()->company_id)
         ->get();
         return $sales_invoice;

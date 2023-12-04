@@ -56,7 +56,7 @@ class SalesInvoiceController extends Controller
         Session::forget('data_input');
         Session::forget('data_itemses');
         Session::forget('datases');
-        $data = SalesInvoice::select('sales_invoice.sales_invoice_date','sales_invoice.customer_name', 'sales_invoice.sales_invoice_no', 'sales_invoice.total_amount', 'sales_invoice.sales_invoice_id', 'core_member.member_name', 'core_member.member_no', 'core_member.division_name')
+        $data = SalesInvoice::select('sales_invoice.sales_invoice_date', 'sales_invoice.sales_invoice_no', 'sales_invoice.total_amount', 'sales_invoice.sales_invoice_id', 'core_member.member_name', 'core_member.member_no', 'core_member.division_name')
         ->leftJoin('core_member', 'core_member.member_id', 'sales_invoice.customer_id')
         ->where('sales_invoice.data_state', 0)
         ->where('sales_invoice.sales_invoice_date', '>=', $start_date)

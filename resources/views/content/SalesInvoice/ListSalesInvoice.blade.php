@@ -136,9 +136,10 @@
                 <thead>
                     <tr>
                         <th style='text-align:center'>No</th>
-                        <th style='text-align:center'>No. NIK</th>
+                        {{-- <th style='text-align:center'>No. NIK</th>
                         <th style='text-align:center'>Devisi</th>
-                        <th style='text-align:center'>Anggota</th>
+                        <th style='text-align:center'>Anggota</th> --}}
+                        <th style='text-align:center'>Pelanggan</th>
                         <th style='text-align:center'>Tanggal Invoice</th>
                         <th style='text-align:center'>Nomor Invoice</th>
                         <th style='text-align:center'>Subtotal</th>
@@ -150,9 +151,9 @@
                     @foreach($data as $row)
                     <tr>
                         <td style='text-align:center'>{{ $no++ }}.</td>
-                        <td>{{ $row['member_no'] }}</td>
-                        <td>{{ $row['division_name'] }}</td>
-                        <td>{{ $row['member_name'] }}</td>
+                        {{-- <td>{{ $row['member_no'] }}</td>
+                        <td>{{ $row['division_name'] }}</td> --}}
+                        <td>{{ $row['customer_name'] }}</td>
                         <td>{{ date('d-m-Y', strtotime($row['sales_invoice_date'])) }}</td>
                         <td>{{ $row['sales_invoice_no'] }}</td>
                         <td style="text-align: right">{{ number_format($row['total_amount'],2,'.',',') }}</td>

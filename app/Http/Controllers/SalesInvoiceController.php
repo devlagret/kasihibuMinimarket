@@ -32,6 +32,9 @@ use Yajra\DataTables\Facades\DataTables;
 
 class SalesInvoiceController extends Controller
 {
+    /**
+    * * 6590/SI/VII/2023 - 20/07/2023 : paid amount > 7500 (registre paid)
+    */
     public function __construct()
     {
         $this->middleware('auth');

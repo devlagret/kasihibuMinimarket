@@ -283,7 +283,8 @@
                     $('#discount_amount_total').val(discount_amount);
                     $('#total_item').val(total_item);
                     $('#show_data').html(html);
-
+                    $('#sbs_amount').val(toRp(total_amount));
+                    count_total();
                     $('#myDataTable').DataTable().search('').draw();
                 }
             }
@@ -405,6 +406,8 @@
                         $('#discount_amount_total').val(discount_amount);
                         $('#total_item').val(total_item);
                         $('#show_data').html(html);
+                        $('#sbs_amount').val(toRp(total_amount));
+                        count_total();
                     }
                 });
         //     }
@@ -469,7 +472,8 @@
         var discount_percentage_total = $('#discount_percentage_total').val() || 0;
         var subtotal_amount = $('#subtotal_amount').val() || 0;
         var paid_amount = $('#paid_amount').val() || 0;
-
+        $('#sbs_amount').val(toRp(subtotal_amount));
+        $('#final_total').val(subtotal_amount);
         if (voucher_id == null) {
             $('#voucher_amount').val('');
         }
@@ -490,6 +494,8 @@
                             $('#voucher_amount').val(voucher_amount);
                             $('#subtotal_amount_view').text('Rp '+toRp(total_amount_af_voucher_amount));
                             $('#subtotal_amount_change').val(total_amount_af_voucher_amount);
+                            $('#ttl_amount').val(toRp(total_amount_af_voucher_amount));
+                            $('#final_total').val(total_amount_af_voucher_amount);
                             if (paid_amount != '') {
                                 $('#change_amount_view').val(toRp(change_amount));
                                 $('#change_amount').val(change_amount);
@@ -505,6 +511,8 @@
             $('#subtotal_amount_view').text('Rp '+toRp(total_amount_af_discount));
             $('#subtotal_amount_change').val(total_amount_af_discount);
             $('#discount_amount_total').val(discount_amount);
+            $('#ttl_amount').val(toRp(total_amount_af_discount));
+            $('#final_total').val(total_amount_af_discount);
             if (paid_amount != '') {
                 $('#change_amount_view').val(toRp(change_amount));
                 $('#change_amount').val(change_amount);
@@ -530,6 +538,8 @@
                             $('#subtotal_amount_view').text('Rp '+toRp(total_amount_af_discount));
                             $('#subtotal_amount_change').val(total_amount_af_discount);
                             $('#discount_amount_total').val(discount_amount);
+                            $('#ttl_amount').val(toRp(total_amount_af_discount));
+                            $('#final_total').val(total_amount_af_discount);
                             if (paid_amount != '') {
                                 $('#change_amount_view').val(toRp(change_amount));
                                 $('#change_amount').val(change_amount);
@@ -540,6 +550,8 @@
         } else if ((voucher_id == null) && (discount_percentage_total == 0)) {
             $('#subtotal_amount_view').text('Rp '+toRp(subtotal_amount));
             $('#subtotal_amount_change').val(subtotal_amount);
+            $('#ttl_amount').val(toRp(subtotal_amount));
+            $('#final_total').val(subtotal_amount);
 
             if (paid_amount != '') {
                 change_amount = paid_amount - subtotal_amount;
@@ -711,6 +723,19 @@
             }
         );
     });
+    function checkall(){
+        count_total();
+        var sales_payment_method = $('#sales_payment_method').val();
+        var paid_amount = parseInt($('#paid_amount').val());
+        var ttl_amount = parseInt($('#final_total').val());
+        if(sales_payment_method!=2&&ttl_amount>paid_amount){
+            alert("Total dibayar tidak boleh lebih kecil daripada total!")
+        }else{
+            $('#sv-btn').addClass('disabled');
+            $('#sv-btn').prop('disabled',true);
+            $('form').submit();
+        }
+    }
 </script>
 @stop
 @section('content_header')
@@ -901,12 +926,29 @@
                 </div>
                 <div class="row mb-3">
                     <div class="col-sm-3">
+                        <a class="text-dark col-form-label">Subtotal</a><a class='red'> *</a></a>
+                    </div>
+                    <div class="col-sm-9">
+                        <input class="form-control input-bb text-right" id="sbs_amount" name="sbs_amount" autocomplete="off" readonly />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3">
                         <a class="text-dark col-form-label">Diskon (%)</a>
                     </div>
                     <div class="col-sm-9">
                         <input class="form-control input-bb" id="discount_percentage_total" name="discount_percentage_total" autocomplete="off" onchange="count_total()"/>
                         <input id="discount_amount_total" name="discount_amount_total" autocomplete="off" hidden/>
                         <input type="text" value="" id="total_item" name="total_item" hidden>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3">
+                        <a class="text-dark col-form-label">Total</a><a class='red'> *</a></a>
+                    </div>
+                    <div class="col-sm-9">
+                        <input class="form-control input-bb text-right" id="ttl_amount" name="ttl_amount" autocomplete="off" readonly />
+                        <input id="final_total" type="hidden" name="final_total" autocomplete="off" />
                     </div>
                 </div>
                 <div class="row mb-3">
@@ -930,7 +972,7 @@
                 <div class="">
                     <div class="form-actions float-right">
                         <button type="reset" name="Reset" class="btn btn-danger" id="form-reset" onclick="reset_add();"><i class="fa fa-times"></i> Batal</button>
-                        <button type="button" name="Save" class="btn btn-success button-prevent" onclick="$(this).addClass('disabled');$(this).prop('disabled',true);count_total();$('form').submit();" title="Save"><i class="fa fa-check"></i> Simpan</button>
+                        <button type="button" name="Save" id="sv-btn" class="btn btn-success button-prevent" onclick="checkall()" title="Save"><i class="fa fa-check"></i> Simpan</button>
                     </div>
                 </div>
             </div>

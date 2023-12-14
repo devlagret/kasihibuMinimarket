@@ -82,9 +82,9 @@ Route::get('/select-item-price/{category_id}/{unit_id}/{item_id}',[HomeControlle
 Route::get('/get-margin-category/{category_id}',[HomeController::class, 'getMarginCategory']);
 Route::get('/amount/sales-invoice/{day}', [HomeController::class, 'getAmountSalesInvoice']);
 Route::get('/amount/purchase-invoice/{day}', [HomeController::class, 'getAmountPurchaseInvoice']);
-Route::get('/select-sales/{item}',[SalesInvoiceController::class, 'selectSalesInvoice']);
-Route::get('/select-sales/{item_name}/{unit_id}',[SalesInvoiceController::class, 'selectItemNameSalesInvoice']);
-Route::get('/sales-invoice/change-qty/{item}/{qty}',[SalesInvoiceController::class, 'changeQtySalesInvoice']);
+Route::get('/select-sales/{item?}',[SalesInvoiceController::class, 'selectSalesInvoice'])->name('selectSalesInvoice');
+Route::get('/select-sales/{item_name?}/{unit_id?}',[SalesInvoiceController::class, 'selectItemNameSalesInvoice'])->name('selectItemNameSalesInvoice');
+Route::get('/sales-invoice/change-qty/{item_packge_id?}/{qty?}',[SalesInvoiceController::class, 'changeQtySalesInvoice'])->name('change-sales-item-qty');
 
 Route::get('/item-unit',[InvtItemUnitController::class, 'index'])->name('item-unit');
 Route::get('/item-unit/add',[InvtItemUnitController::class, 'addInvtItemUnit'])->name('add-item-unit');

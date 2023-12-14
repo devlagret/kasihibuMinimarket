@@ -14,4 +14,7 @@ class JournalVoucher extends Model
         'updated_at',
         'created_at'
     ];
+    public function items() {
+        return $this->hasMany(JournalVoucherItem::class,'journal_voucher_id','journal_voucher_id');
+    }
 }

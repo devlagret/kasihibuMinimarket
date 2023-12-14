@@ -13,4 +13,7 @@ class SalesInvoice extends Model
         'updated_at',
         'created_at',
     ];
+    public function items() {
+        return $this->hasMany(SalesInvoiceItem::class,'sales_invoice_id','sales_invoice_id');
+    }
 }

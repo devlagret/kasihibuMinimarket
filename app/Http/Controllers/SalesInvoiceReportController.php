@@ -60,7 +60,8 @@ class SalesInvoiceReportController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
         // dd($sales_payment_method);
         return view('content.SalesInvoiceReport.ListSalesInvoiceReport', compact('data','start_date','end_date','sales_payment_method','sales_payment_method_list'));
@@ -126,7 +127,8 @@ class SalesInvoiceReportController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
 
         return $sales_payment_method_list[$payment_method];
@@ -169,7 +171,8 @@ class SalesInvoiceReportController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
 
         $pdf = new TCPDF('L', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
@@ -418,7 +421,8 @@ class SalesInvoiceReportController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
 
         $spreadsheet = new Spreadsheet();

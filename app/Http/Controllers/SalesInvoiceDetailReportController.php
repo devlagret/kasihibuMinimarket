@@ -65,7 +65,8 @@ class SalesInvoiceDetailReportController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
         return view('content.SalesInvoiceDetailReport.ListSalesInvoiceDetailReport', compact('data','start_date','end_date','sales_payment_method_list','sales_payment_method'));
     }
@@ -171,7 +172,8 @@ class SalesInvoiceDetailReportController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
 
         $pdf = new TCPDF('L', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
@@ -412,7 +414,8 @@ class SalesInvoiceDetailReportController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
         $sales_invoice_item = SalesInvoiceItem::where('company_id', Auth::user()->company_id)
         ->where('data_state',0)

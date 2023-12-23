@@ -29,7 +29,8 @@ class SalesInvoiceRecapController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
         return view('content.SalesInvoiceRecap.ListSalesInvoiceRecap',compact('start_date', 'end_date','sales_payment_method_list'));
     }

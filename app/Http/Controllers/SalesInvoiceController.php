@@ -99,7 +99,8 @@ class SalesInvoiceController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
         $data = Session::get('data_itemses');
         // $data_item = Session::get('data_input');
@@ -481,7 +482,8 @@ class SalesInvoiceController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
         return view('content.SalesInvoice.FormDetailSalesInvoice', compact('salesinvoice', 'salesinvoiceitem', 'sales_payment_method_list'));
     }
@@ -832,7 +834,7 @@ class SalesInvoiceController extends Controller
             return $item_packge_id;
         }
         $row = collect($data_itemses[$item_packge_id]);
-        $row->put('subtotal_amount_after_discount', ($row['item_unit_price'] * ($row['quantity'] + 1)));
+        $row->put('subtotal_amount_after_discount', ($row['item_unit_price'] * $qty));
         $row->put('quantity', $qty);
         $data_itemses->put($item_packge_id, $row->toArray());
         Session::put('data_itemses', $data_itemses->toArray());
@@ -918,7 +920,8 @@ class SalesInvoiceController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
         $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
         $pdf::SetPrintHeader(false);
@@ -1123,7 +1126,8 @@ class SalesInvoiceController extends Controller
             2 => 'Piutang',
             3 => 'Gopay',
             4 => 'Ovo',
-            5 => 'Shopeepay'
+            5 => 'Shopeepay',
+            6 => 'Bank'
         ];
         $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
         $pdf::SetPrintHeader(false);
